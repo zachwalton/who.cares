@@ -53,7 +53,7 @@ app.post('/calculate-weight', async (req, res) => {
       : null;
 
     const biasPreferenceContent = biasPreference
-      ? `The user prefers a ${biasPreference} perspective for this analysis. Please strongly prefer sources, facts, and analysis with this perspective.`
+      ? `The user prefers a ${biasPreference} perspective for this analysis. Please strongly prefer sources, facts, and analysis with this perspective. The analysis should clearly be from this perspective for a reader.`
       : `The user prefers a neutral perspective for this analysis.`;
 
     const yearContent = year
