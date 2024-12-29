@@ -53,14 +53,14 @@ app.post('/calculate-weight', async (req, res) => {
       : null;
 
     const biasPreferenceContent = biasPreference
-      ? `The user prefers a ${biasPreference} perspective for this analysis.`
+      ? `The user prefers a ${biasPreference} perspective for this analysis. Please strongly prefer sources, facts, and analysis with this perspective.`
       : `The user prefers a neutral perspective for this analysis.`;
 
     const yearContent = year
       ? `Focus the analysis on data and context from around the year ${year}.`
       : `Focus the analysis on recent and relevant data.`;
 
-    const daysContent = `The user is willing to spend ${daysPerYear} days per year on political reasoning, research, and discussion. Adjust the analysis so the ratio of hours is reasonable based on this timeframe.`;
+    const daysContent = `The user is willing to spend ${daysPerYear} days per year (${daysPerYear * 24} full hours) on political reasoning, research, and discussion. Adjust the analysis so the ratio of hours is reasonable based on this timeframe.`;
 
     const categories = personalImpactContent
       ? 'Statistical Impact, Policy Impact Potential, Social Relevance, and Personal Relevance'

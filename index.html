@@ -147,7 +147,11 @@
       const daysPerYear = parseInt(params.get('daysPerYear') || '10');
       for (let days = 1; days <= 90; days++) {
         const selected = days === daysPerYear ? 'selected' : '';
-        document.write(`<option value="${days}" ${selected}>${days}</option>`);
+        document.write(`<option value="${days}" ${selected}>${days} (${days * 24} hours)</option>`);
+      }
+      for (let days = 120; days <= 240; days += 30) {
+        const selected = days === daysPerYear ? 'selected' : '';
+        document.write(`<option value="${days}" ${selected}>${days} (${days * 24} hours)</option>`);
       }
     </script>
   </select>
