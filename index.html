@@ -223,6 +223,7 @@
       <p class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded" id="final-time-description"></p>
       <h3 class="text-xl font-semibold text-gray-800 mt-8">Sources</h3>
       <ul id="sources" class="list-disc list-inside text-gray-700 mt-2"></ul>
+      <div id="disclaimer" class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded mb-2"></div>
     </div>
   </div>
 
@@ -340,6 +341,10 @@ window.addEventListener('DOMContentLoaded', () => {
           container.appendChild(reasoningDiv);
           weightsDiv.appendChild(container);
         });
+
+        const sourceDisclaimerDiv = document.getElementById('disclaimer');
+        sourceDisclaimerDiv.innerHTML = `Seeing broken links? This is an inherent issue with the way sources are currently calculated, which is entirely by AI. While this is difficult conceptually to understand, broken source links do not necessarily imply that the analysis is flawed, since the analysis itself is based on tokenized & aggregated data that OpenAI has fine tuned the model on. LLMs struggle with properly attributing sources for fine-tuning datasets.<br /><br />If this feels like jargon, think of it this way: This tool makes a <span style="italic">best effort</span> attempt to attribute sources, and a <span style="italic">best effort</span> attempt to give you a feeling about how much time you want to spend on a given topic. Follow the source links if they work, but if not, consider the overall analysis and follow up as needed on interesting facts and statistics outside the tool.<br /><br />This will improve over time.`;
+        sourcesList.appendChild(sourceDisclaimerDiv);        
 
         data.sources.forEach(({ source, ground_news_link, citation }, index) => {
           const sourceItem = document.createElement('li');
