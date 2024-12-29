@@ -97,10 +97,14 @@
     </p>
 
 <div>
-  <label for="bias-preference" class="block text-gray-700 font-medium mb-2"
-  >
-      Political Preference
-      <span class="text-sm text-gray-500" title="Choose between Center, Left, or Right to tailor the assessment to your political preferences. This will analyze the topic through the prefeerred political lens, and the tool will prefer sources aligned with the selection.">[?]</span>
+  <label for="bias-preference" class="block text-gray-700 font-medium mb-2">
+    Political Preference
+    <span class="relative group">
+      <span class="text-sm text-gray-500 cursor-pointer">[?]</span>
+      <span class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-2 py-1 w-64 -top-10 left-1/2 transform -translate-x-1/2 shadow-lg">
+        Choose between Center, Left, or Right to tailor the assessment to your political preferences. This will analyze the topic through the preferred political lens, and the tool will prefer sources aligned with the selection.
+      </span>
+    </span>
   </label>
   <select
     id="bias-preference"
@@ -115,8 +119,13 @@
 
 <div>
   <label for="year" class="block text-gray-700 font-medium mb-2 mt-1">
-      Year
-      <span class="text-sm text-gray-500" title="Choose a year to prefer sources and analysis from that time period.">[?]</span>
+    Year
+    <span class="relative group">
+      <span class="text-sm text-gray-500 cursor-pointer">[?]</span>
+      <span class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-2 py-1 w-64 -top-10 left-1/2 transform -translate-x-1/2 shadow-lg">
+        Choose a year to prefer sources and analysis from that time period.
+      </span>
+    </span>
   </label>
   <select
     id="year"
@@ -133,10 +142,16 @@
     </script>
   </select>
 </div>
+
 <div>
   <label for="days-per-year" class="block text-gray-700 font-medium mb-2 mt-2">
-      Number of Days per Year
-      <span class="text-sm text-gray-500" title="Specify the number of days you're willing to spend per year researching, considering, and discussing political topics.">[?]</span>
+    Number of Days per Year
+    <span class="relative group">
+      <span class="text-sm text-gray-500 cursor-pointer">[?]</span>
+      <span class="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-2 py-1 w-64 -top-10 left-1/2 transform -translate-x-1/2 shadow-lg">
+        Specify the number of days you're willing to spend per year researching, considering, and discussing political topics.
+      </span>
+    </span>
   </label>
   <select
     id="days-per-year"

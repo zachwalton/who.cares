@@ -87,7 +87,7 @@ app.post('/calculate-weight', async (req, res) => {
 
             The array of categories should be wrapped in an outer object under the key "data".
 
-            Finally, the response should include a top-level "totalHours" field that uses an intelligent algorithm that uses all weights to calculate a total number of hours an American should reasonably spend researching, discussing, or considering the topic at hand. A top-level "totalHoursDescription" field should also be included that describes in detail how the hours were calculated based on the given weights. "totalHoursDescription" should detail the exact calculation, not eliding details.`,
+            Finally, the response should include a top-level "totalHours" field that uses an intelligent algorithm that uses all weights to calculate a total number of hours an American should reasonably spend researching, discussing, or considering the topic at hand. The "totalHours" value must pass the common sense test; for example, if a user is willing to spend 10 days (240 hours per year) researching politics, a topic that doesn't weigh highly should be reasonably proportional to the overall time allocation. A top-level "totalHoursDescription" field should also be included that describes in detail how the hours were calculated based on the given weights. "totalHoursDescription" should detail the exact calculation, not eliding details.`,
         },
         {
           role: 'user',
