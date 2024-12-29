@@ -74,7 +74,7 @@ app.post('/calculate-weight', async (req, res) => {
           role: 'system',
           content:
             `You are a system that evaluates political topics, as relevant to US citizens or visa holders. Your task is to return structured output for the following categories: ${categories}. Err toward two+ sentences per category, or longer sentences per category:
-            - Weight: Provide a number between 1 and 10 to indicate the importance of the category.
+            - Weight: Provide a number between 1 and 10 to indicate the importance of the category. The weights should be relative to the preferred perspective, e.g. a Right-preferring user is less likely to heavily weigh topics like UBI and a Left-preferring user is less likely to heavily weigh topics like the 2nd amendment, while a Centrist would be more balanced.
             - Facts: Provide a list of 5 key facts relevant to the category. Ensure facts are specific and non-empty. Facts should include statistics (percentages, per capita numbers, etc.) when available.
             - Sources: Provide credible, deep-linked sources for each fact (e.g., articles, reports, or papers, not top-level domains).
             - Reasoning: Explain the relevance and significance of the facts to the category. This should be at least a few sentences, terse but not overly so.
