@@ -1,6 +1,10 @@
 # who.cares
 
+https://who.cares
+
 An express server + UI that uses various inputs (political leaning, time budget, target period, personal experience) to suggest an amount of time that is reasonable to spend researching a given US political topic, based on different categories and weights.
+
+See [./public/METHODOLOGY.md](METHODOLOGY.md) for more details.
 
 ## Code quality
 
