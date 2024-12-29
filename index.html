@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>who.cares</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
   <style>
     /* Custom Animations */
     @keyframes chase {
@@ -56,9 +58,38 @@
     .bias-link {
       margin-left: 10px;
     }
+  html, body {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Content takes all available space except the footer */
+  .content {
+    flex: 1;
+  }
+
+  /* Footer always sticks to the bottom */
+  footer {
+    background-color: #1a202c;
+    color: white;
+    text-align: center;
+    padding: 1rem 0;
+  }
+
+  footer a {
+    color: #63b3ed;
+    text-decoration: underline;
+  }
+
+  footer a:hover {
+    color: #3182ce;
+  }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-r from-red-500 via-white to-blue-500 bg-opacity-80">
+  <div class="content">
   <div class="max-w-4xl mx-auto mt-10 p-8 bg-white rounded-lg shadow-lg">
     <h1 class="text-3xl font-bold text-gray-800 mb-6">How Much Should You Care About This Issue?</h1>
     <p class="text-gray-700 mb-4 mt-4">
@@ -341,6 +372,92 @@ window.addEventListener('DOMContentLoaded', () => {
       resultDiv.classList.remove('hidden');
     } finally {
       spinner.classList.add('hidden');
+    }
+  });
+</script>
+</div>
+<!-- Footer -->
+<footer class="mt-10 bg-gray-800 text-white py-6">
+  <div class="max-w-4xl mx-auto text-center">
+    <p class="text-sm">© 2024 who.cares</p>
+    <div class="flex justify-center mt-4 space-x-4">
+      <!-- Methodology Link -->
+      <button 
+        id="methodology-button" 
+        class="text-blue-400 underline hover:text-blue-500 focus:outline-none"
+        onclick="showMethodologyModal()">
+        methodology
+      </button>
+
+      <!-- Source Link -->
+      <a 
+        href="https://github.com/your-repo" 
+        target="_blank" 
+        class="text-blue-400 underline hover:text-blue-500">
+        source
+      </a>
+
+      <!-- Contact Link -->
+      <a 
+        href="mailto:me@zach.us" 
+        class="text-blue-400 underline hover:text-blue-500">
+        contact
+      </a>
+    </div>
+  </div>
+</footer>
+
+<!-- Modal for Methodology -->
+<div 
+  id="methodology-modal" 
+  class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-7xl max-h-[calc(100%-5rem)] overflow-auto mx-20">
+    <h2 class="text-lg font-bold mb-4">Methodology</h2>
+    <div id="methodology-content" class="text-gray-700 markdown-body">
+      <!-- Content will be loaded dynamically here -->
+    </div>
+    <button 
+      class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      onclick="closeMethodologyModal()">
+      Close
+    </button>
+  </div>
+</div>
+
+<script>
+  function showMethodologyModal() {
+    const modal = document.getElementById('methodology-modal');
+    const contentDiv = document.getElementById('methodology-content');
+
+    // Show the modal
+    modal.classList.remove('hidden');
+
+    // Load the Markdown content
+    fetch('/METHODOLOGY.md')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch methodology content');
+        }
+        return response.text();
+      })
+      .then(markdown => {
+        const m = new marked.Marked();
+        contentDiv.innerHTML = m.parse(markdown);
+      })
+      .catch(error => {
+        contentDiv.innerHTML = '<p class="text-red-600">Failed to load methodology content. Please try again later.</p>';
+        console.error(error);
+      });
+  }
+
+  function closeMethodologyModal() {
+    const modal = document.getElementById('methodology-modal');
+    modal.classList.add('hidden');
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMethodologyModal();
     }
   });
 </script>
