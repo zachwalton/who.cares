@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>who.cares</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom Animations */
+    @keyframes chase {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes spin {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .political-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      animation: chase 2s linear infinite;
+    }
+
+    .elephant, .donkey {
+      width: 50px;
+      height: 50px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    .elephant {
+      background-image: url('red-elephant-icon.png'); /* Replace with your image URL */
+    }
+
+    .donkey {
+      background-image: url('blue-donkey-icon.png'); /* Replace with your image URL */
+    }
+    .fade-in {
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .fade-in.visible {
+      opacity: 1;
+    }
+    .citation {
+      color: #1a73e8;
+      cursor: pointer;
+    }
+    .bias-link {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-r from-red-500 via-white to-blue-500 bg-opacity-80">
+  <div class="max-w-4xl mx-auto mt-10 p-8 bg-white rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">How Much Should You Care About This Issue?</h1>
+    <p class="text-gray-700 mb-4 mt-4">
+      Enter a political topic and describe how it affects you personally, if at all. This tool will assess its broader relevance and recommend how much time you should dedicate to learning about or discussing it.
+    </p>
+
+<div>
+  <label for="bias-preference" class="block text-gray-700 font-medium mb-2"
+  >
+      Political Preference
+      <span class="text-sm text-gray-500" title="Choose between Center, Left, or Right to tailor the assessment to your political preferences. This will analyze the topic through the prefeerred political lens, and the tool will prefer sources aligned with the selection.">[?]</span>
+  </label>
+  <select
+    id="bias-preference"
+    name="bias-preference"
+    class="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-md bg-gradient-to-r from-gray-100 to-gray-50 focus:ring-blue-500 focus:border-blue-500 hover:shadow-lg transition duration-200 ease-in-out sm:text-sm"
+  >
+    <option value="neutral">Center</option>
+    <option value="left">Left</option>
+    <option value="right">Right</option>
+  </select>
+</div>
+
+<div>
+  <label for="year" class="block text-gray-700 font-medium mb-2 mt-1">
+      Year
+      <span class="text-sm text-gray-500" title="Choose a year to prefer sources and analysis from that time period.">[?]</span>
+  </label>
+  <select
+    id="year"
+    name="year"
+    class="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-md bg-gradient-to-r from-gray-100 to-gray-50 focus:ring-blue-500 focus:border-blue-500 hover:shadow-lg transition duration-200 ease-in-out sm:text-sm"
+  >
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const currentYear = new Date().getFullYear();
+      const y = parseInt(params.get('year') || currentYear.toString());
+      for (let year = currentYear; year >= 1970; year--) {
+        document.write(`<option value="${year}">${year}</option>`);
+      }
+    </script>
+  </select>
+</div>
+<div>
+  <label for="days-per-year" class="block text-gray-700 font-medium mb-2 mt-2">
+      Number of Days per Year
+      <span class="text-sm text-gray-500" title="Specify the number of days you're willing to spend per year researching, considering, and discussing political topics.">[?]</span>
+  </label>
+  <select
+    id="days-per-year"
+    name="days-per-year"
+    class="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-md bg-gradient-to-r from-gray-100 to-gray-50 focus:ring-blue-500 focus:border-blue-500 hover:shadow-lg transition duration-200 ease-in-out sm:text-sm"
+  >
+    <script>
+      const daysPerYear = parseInt(params.get('daysPerYear') || '10');
+      for (let days = 1; days <= 90; days++) {
+        const selected = days === daysPerYear ? 'selected' : '';
+        document.write(`<option value="${days}" ${selected}>${days}</option>`);
+      }
+    </script>
+  </select>
+</div>
+
+
+    <form id="topic-form" class="space-y-6">
+      <div>
+        <label for="topic" class="block text-gray-700 font-medium mt-2 ">What’s the Issue?</label>
+        <input 
+          type="text" 
+          id="topic" 
+          name="topic" 
+          class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          placeholder="e.g., Healthcare policy"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="personal-impact" class="block text-gray-700 font-medium">
+          How Does This Affect You? (Optional)
+        </label>
+        <textarea
+          id="personal-impact"
+          name="personal-impact"
+          rows="4"
+          class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          placeholder="Provide a specific example, such as: 'I have perfect healthcare and will never have to pay more than a $10 co-pay.'"
+        ></textarea>
+      </div>
+
+      <button 
+        type="submit" 
+        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+      >
+        See Your Recommendation
+      </button>
+    </form>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="political-spinner hidden mt-14 mb-4">
+      <div class="elephant"></div>
+      <div class="donkey"></div>
+    </div>
+
+    <div id="result" class="mt-8 hidden">
+      <h2 class="text-2xl font-semibold text-gray-800">Results</h2>
+      <div id="weights" class="mt-6 space-y-6"></div>
+      <p class="mt-6 text-lg font-semibold text-gray-800" id="final-time"></p>
+      <p class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded" id="final-time-description"></p>
+      <h3 class="text-xl font-semibold text-gray-800 mt-8">Sources</h3>
+      <ul id="sources" class="list-disc list-inside text-gray-700 mt-2"></ul>
+    </div>
+  </div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+
+  const topic = params.get('topic');
+  const personalImpact = params.get('personalImpact');
+  const biasPreference = params.get('biasPreference');
+  const year = params.get('year');
+
+  if (topic) document.getElementById('topic').value = topic;
+  if (personalImpact) document.getElementById('personal-impact').value = personalImpact;
+  if (biasPreference) document.getElementById('bias-preference').value = biasPreference;
+  if (year) document.getElementById('year').value = year;
+
+  // Trigger the analysis if query params are present
+  if (topic) {
+    document.getElementById('topic-form').dispatchEvent(new Event('submit'));
+  }
+});
+
+  document.getElementById('topic-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const topic = document.getElementById('topic').value.trim();
+    const personalImpact = document.getElementById('personal-impact').value.trim();
+    const biasPreference = document.getElementById('bias-preference').value;
+    const year = document.getElementById('year').value;
+    const daysPerYear = document.getElementById('days-per-year').value;
+    const spinner = document.getElementById('loading-spinner');
+    const resultDiv = document.getElementById('result');
+    const weightsDiv = document.getElementById('weights');
+    const sourcesList = document.getElementById('sources');
+    const finalTime = document.getElementById('final-time');
+    const finalTimeDescription = document.getElementById('final-time-description');
+
+  // Update query params in the address bar
+  const queryParams = new URLSearchParams({
+    topic,
+    personalImpact,
+    biasPreference,
+    year,
+    daysPerYear,
+  }).toString();
+
+  window.history.pushState({}, '', `?${queryParams}`);
+
+    spinner.classList.remove('hidden');
+    resultDiv.classList.add('hidden');
+    weightsDiv.innerHTML = '';
+    sourcesList.innerHTML = '';
+    finalTime.textContent = '';
+
+    try {
+      const response = await fetch('/calculate-weight', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic, personalImpact, biasPreference, year, daysPerYear }),
+      });
+
+      const data = await response.json();
+
+      if (data.weights && data.weights.length > 0) {
+        data.weights.forEach(({ category, reasoning, weight, sources, facts }) => {
+          const container = document.createElement('div');
+          container.className = 'p-4 bg-gray-100 rounded-md shadow-sm mb-4';
+
+          const title = document.createElement('h3');
+          title.textContent = `${category}: ${weight}/10`;
+          title.className = 'text-lg font-medium text-gray-800 mb-2';
+
+          const descriptionPara = document.createElement('p');
+          descriptionPara.textContent = reasoning;
+          descriptionPara.className = 'text-gray-700 mb-2';
+
+          const toggleReasoning = document.createElement('button');
+          toggleReasoning.textContent = 'Show Reasoning';
+          toggleReasoning.className = 'text-blue-600 underline cursor-pointer';
+          toggleReasoning.addEventListener('click', () => {
+            reasoningDiv.classList.toggle('hidden');
+            toggleReasoning.textContent = reasoningDiv.classList.contains('hidden')
+              ? 'Show Reasoning'
+              : 'Hide Reasoning';
+          });
+
+          const reasoningDiv = document.createElement('div');
+          reasoningDiv.className = 'hidden mt-4';
+
+          const factsList = document.createElement('ul');
+          factsList.className = 'list-disc list-inside text-gray-700';
+          facts.forEach((fact, index) => {
+            const factItem = document.createElement('li');
+            const citation = sources[index]?.citation.replace(/[\[\]]/g, "") || '';
+
+            if (citation) {
+              factItem.innerHTML = `${fact} <a href="#source-${citation}" target="_blank" class="citation">[${citation}]</a>`;
+            } else {
+              factItem.textContent = fact;
+            }
+
+            factsList.appendChild(factItem);
+          });
+
+          reasoningDiv.appendChild(factsList);
+
+          container.appendChild(title);
+          container.appendChild(descriptionPara);
+          if (facts.length > 0) {
+            container.appendChild(toggleReasoning);
+          }
+          container.appendChild(reasoningDiv);
+          weightsDiv.appendChild(container);
+        });
+
+        data.sources.forEach(({ source, ground_news_link, citation }, index) => {
+          const sourceItem = document.createElement('li');
+          sourceItem.id = `source-${index + 1}`;
+          sourceItem.innerHTML = `<a href="${source}" target="_blank" class="text-blue-600 underline">${citation} ${source}</a>`;
+
+          const biasDiv = document.createElement('div');
+          biasDiv.className = 'hidden mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded';
+
+          const toggleBias = document.createElement('button');
+          toggleBias.textContent = 'Show Bias';
+          toggleBias.className = 'text-blue-600 underline cursor-pointer bias-link';
+
+          toggleBias.addEventListener('click', () => {
+            if (biasDiv.innerHTML === '') {
+              if (ground_news_link) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://snip.info/api/v1/snippet?url=${encodeURIComponent(ground_news_link)}&selector=%23__next%20%3E%20main%20%3E%20div.relative.transition-all.duration-500.z-10%20%3E%20div.bg-light-primary.dark%5C%3Abg-dark-primary.text-dark-primary.dark%5C%3Atext-light-primary%20%3E%20article%20%3E%20div.flex.flex-col.gap-2.tablet%5C%3Agap-3_2.col-span-12.desktop%5C%3Acol-span-9%20%3E%20div%3Anth-child(1)%20%3E%20div%3Anth-child(2)%20%3E%20div%20%3E%20div%3Anth-child(2)&selector=style`;
+                iframe.src = `https://snip.info/api/v1/snippet?url=${encodeURIComponent(ground_news_link)}&selector=%23__next%20%3E%20main%20%3E%20div.relative.transition-all.duration-500.z-10%20%3E%20div.bg-light-primary.dark%5C%3Abg-dark-primary.text-dark-primary.dark%5C%3Atext-light-primary%20%3E%20article%20%3E%20div.flex.flex-col.gap-2.tablet%5C%3Agap-3_2.col-span-12.desktop%5C%3Acol-span-9%20%3E%20div%3Anth-child(1)%20%3E%20div%3Anth-child(2)%20%3E%20div%20%3E%20div%3Anth-child(2)&selector=style`
+                iframe.className = 'w-full h-64';
+                iframe.style.border = 'none';
+                biasDiv.appendChild(iframe);
+                const sourceP = document.createElement('p');
+                sourceP.innerHTML = `<sub><a href='${ground_news_link}'>source</a></sub>`
+              } else {
+                  biasDiv.innerHTML = `Could not calculate bias for this source. Try searching for <code>${source}</code> on <a class="text-blue-500 underline" href="https://ground.news">Ground News</a>.`;
+              }
+            }
+            biasDiv.classList.toggle('hidden');
+            toggleBias.textContent = biasDiv.classList.contains('hidden')
+              ? 'Show Bias'
+              : 'Hide Bias';
+          });
+
+          const biasLink = document.createElement('sup');
+          biasLink.appendChild(toggleBias);
+          sourceItem.appendChild(biasLink);
+          sourceItem.appendChild(biasDiv);
+          sourcesList.appendChild(sourceItem);
+        });
+
+        finalTime.textContent = `Based on this analysis, you should dedicate approximately ${data.totalHours} hours this year to understanding or discussing this issue because of its relevance and importance.`;
+        finalTimeDescription.textContent = data.totalHoursDescription;
+        const biasDiv = document.createElement('div');
+        resultDiv.classList.remove('hidden');
+      } else {
+        throw new Error('Invalid response format or no data received.');
+      }
+    } catch (error) {
+      console.error('Error calculating weight:', error);
+      finalTime.textContent = 'An error occurred while processing your request.';
+      resultDiv.classList.remove('hidden');
+    } finally {
+      spinner.classList.add('hidden');
+    }
+  });
+</script>
+</body>
+</html>
