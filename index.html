@@ -265,12 +265,12 @@
   function compressAndEncode(state) {
     const jsonString = JSON.stringify(state);
     const compressed = new TextEncoder().encode(jsonString); // Compress to Uint8Array
-    return btoa(String.fromCharCode(...compressed));
+    return encodeURIComponent(btoa(String.fromCharCode(...compressed)));
   }
   
   function decodeAndDecompress(encodedState) {
     try {
-      const compressed = atob(encodedState.replace(/ /g, '+'))
+      const compressed = atob(decodeURIComponent(encodedState))
         .split('')
         .map((char) => char.charCodeAt(0)); // Decode Base64 to a byte array
       return JSON.parse(new TextDecoder().decode(new Uint8Array(compressed))); // Reconstruct the JSON object
