@@ -219,6 +219,15 @@
 
     <div id="result" class="mt-8 hidden">
       <h2 class="text-2xl font-semibold text-gray-800">Results</h2>
+      <div class="mt-6">
+        <button id="share-results" class="relative flex items-center space-x-2 text-blue-600 hover:text-blue-800">
+          <span class="italic">Share these results...</span>
+          <div 
+            id="clipboard-tooltip" 
+            class="hidden absolute bg-gray-800 text-white text-xs rounded-md px-1 py-1 transform -translate-x-1/2 shadow-md"
+          >Link copied to clipboard!</div>
+        </button>
+      </div>
       <div id="weights" class="mt-6 space-y-6"></div>
       <p class="mt-6 text-lg font-semibold text-gray-800" id="final-time"></p>
     <div id="chat-section" class="mt-6">
@@ -233,7 +242,9 @@
     </div>
       <h3 class="text-xl font-semibold text-gray-800 mt-8">Sources</h3>
       <ul id="sources" class="list-disc list-inside text-gray-700 mt-2"></ul>
-      <div id="disclaimer" class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded mb-2"></div>
+      <div id="disclaimer" class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded mb-2">
+          Seeing broken links? This is an inherent issue with the way sources are currently calculated, which is entirely by AI. While this is difficult conceptually to understand, broken source links do not necessarily imply that the analysis is flawed, since the analysis itself is based on tokenized & aggregated data that OpenAI has fine tuned the model on. LLMs struggle with properly attributing sources for fine-tuned datasets, as in fact the tokenized output of fine tuning is entirely decoupled from the source material the tokens were generated from.<br /><br />If this feels like jargon, think of it this way: LLMs are like if Uncle Ronnie could read the entire Internet. He would retain various snippets of information and broad associations between different topics, but he's probably going to get it wrong sometimes. He certainly can't recite the full link to every article associated with every bit of information he's absorbed (he can for some of them though!), but he's read enough that there are glimmers of interesting information that you pick up on while he's talking (and talking...) at dinner. Maybe you ask for a source for some bold claim and the pointer he gives you is spot on, or maybe it's way off, but either way you have enough information to go find out.<br /><br />This tool is basically that, if you also had the superpower to perform real-time comprehensive analysis of Uncle Ronnie's 2-hour word salad.<br /><br />(there are other, better approaches to this so expect this situation to improve over time)
+      </div>
     </div>
   </div>
 
@@ -250,9 +261,98 @@
     biasPreference = document.getElementById('bias-preference').value;
   }
 
+  // Compression and Base64 utilities
+  function compressAndEncode(state) {
+    const jsonString = JSON.stringify(state);
+    const compressed = new TextEncoder().encode(jsonString); // Compress to Uint8Array
+    return btoa(String.fromCharCode(...compressed));
+  }
+  
+  function decodeAndDecompress(encodedState) {
+    try {
+      const compressed = atob(encodedState.replace(/ /g, '+'))
+        .split('')
+        .map((char) => char.charCodeAt(0)); // Decode Base64 to a byte array
+      return JSON.parse(new TextDecoder().decode(new Uint8Array(compressed))); // Reconstruct the JSON object
+    } catch (error) {
+      console.error('Error decoding or decompressing:', error);
+      throw new Error('Failed to decode state');
+    }
+  }
+
+  function escapeHTML(str) {
+    return str;
+    const div = document.createElement('div');
+    div.innerText = str;
+    return div.innerHTML;
+  }
+  
+  // Gather and share results
+  document.getElementById('share-results').addEventListener('click', async function () {
+    const tooltip = document.getElementById('clipboard-tooltip');
+  
+    const state = {
+      topic: document.getElementById('topic').value,
+      personalImpact: document.getElementById('personal-impact').value,
+      biasPreference: document.getElementById('bias-preference').value,
+      year: document.getElementById('year').value,
+      daysPerYear: document.getElementById('days-per-year').value,
+      chatHistory: conversationHistory,
+      results: document.getElementById('weights').innerHTML,
+      sources: Array.from(document.querySelectorAll('#sources li')).map(li => ({
+        html: li.innerHTML,
+      })),
+    };
+  
+    const encodedState = await compressAndEncode(state);
+    const url = `${window.location.origin}${window.location.pathname}?results=${encodedState}`;
+  
+    try {
+      await navigator.clipboard.writeText(url);
+  
+      // Show tooltip for 1.5 seconds
+      tooltip.classList.remove('hidden');
+      setTimeout(() => {
+        tooltip.classList.add('hidden');
+      }, 1500);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      alert('Failed to copy link. Please try again.');
+    }
+  });
+
   window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
+    const encodedState = params.get('results');
+    if (encodedState) {
+      try {
+        const state = decodeAndDecompress(encodedState);
+        document.getElementById('topic').value = escapeHTML(state.topic) || '';
+        document.getElementById('personal-impact').value = escapeHTML(state.personalImpact) || '';
+        document.getElementById('bias-preference').value = escapeHTML(state.biasPreference) || 'neutral';
+        document.getElementById('year').value = escapeHTML(state.year) || new Date().getFullYear();
+        document.getElementById('days-per-year').value = escapeHTML(state.daysPerYear) || 10;
+        document.getElementById('weights').innerHTML = escapeHTML(state.results) || '';
+        const sourcesList = document.getElementById('sources');
+
+        if (Array.isArray(state.sources)) {
+          sourcesList.innerHTML = ''; // Clear existing sources
+          state.sources.forEach(({ html }) => {
+            const li = document.createElement('li');
+            li.innerHTML = html; // Use innerHTML since it's pre-escaped during encoding
+            sourcesList.appendChild(li);
+          });
+        }
   
+        conversationHistory = Array.isArray(state.chatHistory) ? state.chatHistory : [];
+        conversationHistory.forEach(({ role, content }) => addMessage(role === 'assistant' ? 'iffy.app' : getUserType(), content));
+        const resultDiv = document.getElementById('result');
+        resultDiv.classList.remove('hidden');
+        return;
+      } catch (error) {
+        console.error('Failed to rehydrate state:', error);
+      }
+    };  
     const topic = params.get('topic');
     const personalImpact = params.get('personalImpact');
     const year = params.get('year');
@@ -359,10 +459,6 @@
           container.appendChild(reasoningDiv);
           weightsDiv.appendChild(container);
         });
-
-        const sourceDisclaimerDiv = document.getElementById('disclaimer');
-          sourceDisclaimerDiv.innerHTML = `Seeing broken links? This is an inherent issue with the way sources are currently calculated, which is entirely by AI. While this is difficult conceptually to understand, broken source links do not necessarily imply that the analysis is flawed, since the analysis itself is based on tokenized & aggregated data that OpenAI has fine tuned the model on. LLMs struggle with properly attributing sources for fine-tuned datasets, as in fact the tokenized output of fine tuning is entirely decoupled from the source material the tokens were generated from.<br /><br />If this feels like jargon, think of it this way: LLMs are like if Uncle Ronnie could read the entire Internet. He would retain various snippets of information and broad associations between different topics, but he's probably going to get it wrong sometimes. He certainly can't recite the full link to every article associated with every bit of information he's absorbed (he can for some of them though!), but he's read enough that there are glimmers of interesting information that you pick up on while he's talking (and talking...) at dinner. Maybe you ask for a source for some bold claim and the pointer he gives you is spot on, or maybe it's way off, but either way you have enough information to go find out.<br /><br />This tool is basically that, if you also had the superpower to perform real-time comprehensive analysis of Uncle Ronnie's 2-hour word salad.<br /><br />(there are other, better approaches to this so expect this situation to improve over time)`;
-        sourcesList.appendChild(sourceDisclaimerDiv);        
 
         data.sources.forEach(({ source, ground_news_link, citation }, index) => {
           const sourceItem = document.createElement('li');
@@ -476,7 +572,7 @@
     function addMessage(sender, message) {
       const messageDiv = document.createElement('div');
       messageDiv.className = `p-2 rounded-md mb-2 ${sender === 'iffy.app' ? 'bg-gray-200' : 'bg-blue-200'}`;
-      messageDiv.innerHTML = `<span class="font-semibold">${sender}:</span> ${message}`;
+      messageDiv.innerHTML = `<span class="font-semibold">${sender}:</span> ${escapeHTML(message)}`;
       chatBox.appendChild(messageDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
