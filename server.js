@@ -39,7 +39,7 @@ const WeightSchema = z.object({
   )
 });
 
-// API endpoint
+// API endpoint to calculate weights and provide initial analysis
 app.post('/calculate-weight', async (req, res) => {
   const { topic, personalImpact, biasPreference, year, daysPerYear } = req.body;
 
@@ -53,14 +53,14 @@ app.post('/calculate-weight', async (req, res) => {
       : null;
 
     const biasPreferenceContent = biasPreference
-      ? `The user prefers a ${biasPreference} perspective for this analysis. Please strongly prefer sources, facts, and analysis with this perspective. The analysis should clearly be from this perspective for a reader.`
+      ? `The user prefers a ${biasPreference} perspective for this analysis.`
       : `The user prefers a neutral perspective for this analysis.`;
 
     const yearContent = year
       ? `Focus the analysis on data and context from around the year ${year}.`
       : `Focus the analysis on recent and relevant data.`;
 
-    const daysContent = `The user is willing to spend ${daysPerYear} days per year (${daysPerYear * 24} full hours) on political reasoning, research, and discussion. Adjust the analysis so the ratio of hours is reasonable based on this timeframe.`;
+    const daysContent = `The user is willing to spend ${daysPerYear} days per year (${daysPerYear * 24} full hours) on political reasoning, research, and discussion.`;
 
     const categories = personalImpactContent
       ? 'Statistical Impact, Policy Impact Potential, Social Relevance, and Personal Relevance'
@@ -87,7 +87,7 @@ app.post('/calculate-weight', async (req, res) => {
 
             The array of categories should be wrapped in an outer object under the key "data".
 
-            Finally, the response should include a top-level "totalHours" field that uses an intelligent algorithm that uses all weights to calculate a total number of hours an American should reasonably spend researching, discussing, or considering the topic at hand. The "totalHours" value must pass the common sense test; for example, if a user is willing to spend 10 days (240 hours per year) researching politics, a topic that doesn't weigh highly should be reasonably proportional to the overall time allocation. A top-level "totalHoursDescription" field should also be included that describes in detail how the hours were calculated based on the given weights. "totalHoursDescription" should detail the exact calculation, not eliding details.`,
+            Finally, the response should include a top-level "totalHours" field that uses an intelligent algorithm that uses all weights to calculate a total number of hours an American should reasonably spend researching, discussing, or considering the topic at hand. The "totalHours" value must pass the common sense test; for example, if a user is willing to spend 10 days (240 hours per year) researching politics, a topic that doesn't weigh highly should be reasonably proportional to the overall time allocation. The totalHours calculation must involve the numeric weights assigned to the topic. A top-level "totalHoursDescription" field should also be included that describes in detail how the hours were calculated based on the given weights. "totalHoursDescription" should detail the exact calculation, not eliding details.`,
         },
         {
           role: 'user',
@@ -160,11 +160,17 @@ app.post('/calculate-weight', async (req, res) => {
       ground_news_link: value.ground_news_link,
     }));
 
+    const analysisSummary = `
+      ${response.totalHoursDescription}
+      Key Insights: ${response.data.map(w => `${w.category}: ${w.weight}/10`).join(', ')}.
+    `;
+
     res.json({
       weights: enhancedData,
       totalHours: response.totalHours,
       totalHoursDescription: response.totalHoursDescription,
-      sources: combinedSources
+      sources: combinedSources,
+      analysisContext: analysisSummary, // Include analysis context for chat
     });
   } catch (error) {
     console.error('Error with OpenAI API:', error.message);
@@ -172,7 +178,33 @@ app.post('/calculate-weight', async (req, res) => {
   }
 });
 
+// API endpoint for chat
+app.post('/chat', async (req, res) => {
+  const { conversation, analysisContext } = req.body;
+
+  if (!conversation || !Array.isArray(conversation) || !analysisContext) {
+    return res.status(400).json({ error: 'Invalid conversation history or analysis context.' });
+  }
+
+  try {
+    const messages = [
+      { role: 'system', content: `You are discussing the topic based on the following analysis: ${analysisContext}` },
+      ...conversation,
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages,
+    });
+
+    const reply = completion.choices[0]?.message?.content || 'Sorry, I couldn’t process your question.';
+    res.json({ reply });
+  } catch (error) {
+    console.error('Error with OpenAI API:', error.message);
+    res.status(500).json({ error: 'Failed to process the chat.' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
-

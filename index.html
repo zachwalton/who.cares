@@ -58,6 +58,7 @@
     .bias-link {
       margin-left: 10px;
     }
+    
   html, body {
     height: 100%;
     margin: 0;
@@ -220,7 +221,16 @@
       <h2 class="text-2xl font-semibold text-gray-800">Results</h2>
       <div id="weights" class="mt-6 space-y-6"></div>
       <p class="mt-6 text-lg font-semibold text-gray-800" id="final-time"></p>
-      <p class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded" id="final-time-description"></p>
+    <div id="chat-section" class="mt-6">
+      <h3 class="text-xl font-semibold text-gray-800">Ask Follow-up Questions</h3>
+      <div id="chat-box" class="mt-4 p-4 bg-gray-100 rounded-md shadow-md max-h-60 overflow-y-auto">
+        <!-- Chat messages will appear here -->
+      </div>
+      <form id="chat-form" class="mt-4 flex">
+        <input id="chat-input" class="flex-grow px-4 py-2 border" placeholder="Type your question here..." required>
+        <button type="submit" class="ml-2 bg-blue-600 text-white py-2 px-4 rounded-md">Send</button>
+      </form>
+    </div>
       <h3 class="text-xl font-semibold text-gray-800 mt-8">Sources</h3>
       <ul id="sources" class="list-disc list-inside text-gray-700 mt-2"></ul>
       <div id="disclaimer" class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded mb-2"></div>
@@ -228,31 +238,40 @@
   </div>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-
-  const topic = params.get('topic');
-  const personalImpact = params.get('personalImpact');
-  const biasPreference = params.get('biasPreference');
-  const year = params.get('year');
-
-  if (topic) document.getElementById('topic').value = topic;
-  if (personalImpact) document.getElementById('personal-impact').value = personalImpact;
-  if (biasPreference) document.getElementById('bias-preference').value = biasPreference;
-  if (year) document.getElementById('year').value = year;
-
-  // Trigger the analysis if query params are present
-  if (topic) {
-    document.getElementById('topic-form').dispatchEvent(new Event('submit'));
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatBox = document.getElementById('chat-box');
+  let analysisContext = ''; // Stores analysis context
+  let conversationHistory = []; // Maintains chat history
+  let biasPreference = params.get('biasPreference');
+  if (biasPreference) {
+    document.getElementById('bias-preference').value = biasPreference;
+  } else {
+    biasPreference = document.getElementById('bias-preference').value;
   }
-});
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+  
+    const topic = params.get('topic');
+    const personalImpact = params.get('personalImpact');
+    const year = params.get('year');
+    if (topic) document.getElementById('topic').value = topic;
+    if (personalImpact) document.getElementById('personal-impact').value = personalImpact;
+    if (year) document.getElementById('year').value = year;
+  
+    // Trigger the analysis if query params are present
+    if (topic) {
+      document.getElementById('topic-form').dispatchEvent(new Event('submit'));
+    }
+  });
 
   document.getElementById('topic-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const topic = document.getElementById('topic').value.trim();
     const personalImpact = document.getElementById('personal-impact').value.trim();
-    const biasPreference = document.getElementById('bias-preference').value;
+    biasPreference = document.getElementById('bias-preference').value;
     const year = document.getElementById('year').value;
     const daysPerYear = document.getElementById('days-per-year').value;
     const spinner = document.getElementById('loading-spinner');
@@ -260,7 +279,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const weightsDiv = document.getElementById('weights');
     const sourcesList = document.getElementById('sources');
     const finalTime = document.getElementById('final-time');
-    const finalTimeDescription = document.getElementById('final-time-description');
 
   // Update query params in the address bar
   const queryParams = new URLSearchParams({
@@ -387,9 +405,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         finalTime.textContent = `Based on this analysis, you should dedicate approximately ${data.totalHours} hours this year to understanding or discussing this issue because of its relevance and importance.`;
-        finalTimeDescription.textContent = data.totalHoursDescription;
         const biasDiv = document.createElement('div');
+        analysisContext = data.analysisContext; // Store analysis context
         resultDiv.classList.remove('hidden');
+
+        conversationHistory = [{ role: 'assistant', content: analysisContext }];
+        addMessage('iffy.app', analysisContext);
       } else {
         throw new Error('Invalid response format or no data received.');
       }
@@ -401,6 +422,64 @@ window.addEventListener('DOMContentLoaded', () => {
       spinner.classList.add('hidden');
     }
   });
+
+    // Define a function to get the user type based on biasPreference
+    function getUserType() {
+      switch (biasPreference) {
+        case 'neutral':
+          return 'Centrist';
+        case 'right':
+          return 'Conservative';
+        case 'left':
+          return 'Liberal';
+        default:
+          return 'User'; // Default fallback
+      }
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userMessage = chatInput.value.trim();
+      if (!userMessage) return;
+
+      addMessage(getUserType(), userMessage);
+      chatInput.value = '';
+
+      conversationHistory.push({ role: 'user', content: userMessage });
+
+      // Display "Asking..." message
+      const askingMessage = document.createElement('div');
+      askingMessage.className = 'p-2 rounded-md mb-2 bg-gray-200';
+      askingMessage.innerHTML= '<span class="font-semibold">iffy.app:</span> <span class="italic">Loading...</span>';
+      chatBox.appendChild(askingMessage);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversation: conversationHistory, analysisContext }),
+        });
+        const data = await response.json();
+        const aiMessage = data.reply || 'Sorry, I couldn’t process your question.';
+        
+        // Replace "Asking..." with the actual AI message
+        askingMessage.innerHTML= `<span class="font-semibold">iffy.app:</span> ${aiMessage}`;
+        conversationHistory.push({ role: 'assistant', content: aiMessage });
+      } catch (error) {
+        console.error('Error during chat:', error);
+        // Replace "Asking..." with an error message
+        askingMessage.innerHTML= '<span class="font-semibold>"iffy.app:</span> <span class="italic">An error occurred while trying to answer your question.</span>';
+      }
+    });
+
+    function addMessage(sender, message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `p-2 rounded-md mb-2 ${sender === 'iffy.app' ? 'bg-gray-200' : 'bg-blue-200'}`;
+      messageDiv.innerHTML = `<span class="font-semibold">${sender}:</span> ${message}`;
+      chatBox.appendChild(messageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
 </script>
 </div>
 <!-- Footer -->
