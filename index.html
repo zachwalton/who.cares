@@ -221,7 +221,7 @@
       <h2 class="text-2xl font-semibold text-gray-800">Results</h2>
       <div class="mt-6">
         <button id="share-results" class="relative flex items-center space-x-2 text-blue-600 hover:text-blue-800">
-          <span class="italic">Share these results...</span>
+            <!--<span class="italic">Share these results...</span>-->
           <div 
             id="clipboard-tooltip" 
             class="hidden absolute bg-gray-800 text-white text-xs rounded-md px-1 py-1 transform -translate-x-1/2 shadow-md"
@@ -240,11 +240,8 @@
         <button type="submit" class="ml-2 bg-blue-600 text-white py-2 px-4 rounded-md">Send</button>
       </form>
     </div>
-      <h3 class="text-xl font-semibold text-gray-800 mt-8">Sources</h3>
+      <h3 class="text-xl font-semibold text-gray-800 mt-8">References</h3>
       <ul id="sources" class="list-disc list-inside text-gray-700 mt-2"></ul>
-      <div id="disclaimer" class="mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded mb-2">
-          Seeing broken links? This is an inherent issue with the way sources are currently calculated, which is entirely by AI. While this is difficult conceptually to understand, broken source links do not necessarily imply that the analysis is flawed, since the analysis itself is based on tokenized & aggregated data that OpenAI has fine tuned the model on. LLMs struggle with properly attributing sources for fine-tuned datasets, as in fact the tokenized output of fine tuning is entirely decoupled from the source material the tokens were generated from.<br /><br />If this feels like jargon, think of it this way: LLMs are like if Uncle Ronnie could read the entire Internet. He would retain various snippets of information and broad associations between different topics, but he's probably going to get it wrong sometimes. He certainly can't recite the full link to every article associated with every bit of information he's absorbed (he can for some of them though!), but he's read enough that there are glimmers of interesting information that you pick up on while he's talking (and talking...) at dinner. Maybe you ask for a source for some bold claim and the pointer he gives you is spot on, or maybe it's way off, but either way you have enough information to go find out.<br /><br />This tool is basically that, if you also had the superpower to perform real-time comprehensive analysis of Uncle Ronnie's 2-hour word salad.<br /><br />(there are other, better approaches to this so expect this situation to improve over time)
-      </div>
     </div>
   </div>
 
@@ -265,12 +262,13 @@
   function compressAndEncode(state) {
     const jsonString = JSON.stringify(state);
     const compressed = new TextEncoder().encode(jsonString); // Compress to Uint8Array
-    return encodeURIComponent(btoa(String.fromCharCode(...compressed)));
+    return btoa(String.fromCharCode(...compressed));
   }
   
   function decodeAndDecompress(encodedState) {
     try {
-      const compressed = atob(decodeURIComponent(encodedState))
+        console.log(encodedState);
+      const compressed = atob(encodedState)
         .split('')
         .map((char) => char.charCodeAt(0)); // Decode Base64 to a byte array
       return JSON.parse(new TextDecoder().decode(new Uint8Array(compressed))); // Reconstruct the JSON object
@@ -409,7 +407,7 @@
       const data = await response.json();
 
       if (data.weights && data.weights.length > 0) {
-        data.weights.forEach(({ category, reasoning, weight, sources, facts }) => {
+        data.weights.forEach(({ category, reasoning, weight, facts }) => {
           const container = document.createElement('div');
           container.className = 'p-4 bg-gray-100 rounded-md shadow-sm mb-4';
 
@@ -438,12 +436,17 @@
           factsList.className = 'list-disc list-inside text-gray-700';
           facts.forEach((fact, index) => {
             const factItem = document.createElement('li');
-            const citation = sources[index]?.citation.replace(/[\[\]]/g, "") || '';
+            const citations = fact.sources.map((source) => 
+              source.citation.replace(/[\[\]]/g, "")
+            ).filter(Boolean); // Get all citations and filter out falsy ones
 
-            if (citation) {
-              factItem.innerHTML = `${fact} <a href="#source-${citation}" target="_blank" class="citation">[${citation}]</a>`;
+            if (citations.length > 0) {
+              const citationLinks = citations
+                .map((citation) => `<a href="#source-${citation}" class="citation">[${citation}]</a>`)
+                .join(" "); // Create citation links and join with spaces
+              factItem.innerHTML = `${fact.fact} ${citationLinks}`;
             } else {
-              factItem.textContent = fact;
+              factItem.textContent = fact.fact;
             }
 
             factsList.appendChild(factItem);
@@ -460,20 +463,24 @@
           weightsDiv.appendChild(container);
         });
 
-        data.sources.forEach(({ source, ground_news_link, citation }, index) => {
+        data.weights.flatMap(weight => weight.facts).flatMap(fact => fact.sources).forEach(({ title, link, citation, ground_news_link, snippet }, index) => {
+          if (!link) {
+            return;
+          }
           const sourceItem = document.createElement('li');
           sourceItem.id = `source-${index + 1}`;
-          sourceItem.innerHTML = `<a href="${source}" target="_blank" class="text-blue-600 underline">${citation} ${source}</a>`;
+          sourceItem.innerHTML = `<a href="${link}" target="_blank" class="text-blue-600 underline">${citation} ${title}</a>`;
 
           const biasDiv = document.createElement('div');
           biasDiv.className = 'hidden mt-4 pl-8 bg-gray-100 border-l-4 border-blue-500 text-gray-700 p-4 rounded';
 
           const toggleBias = document.createElement('button');
-          toggleBias.textContent = 'Show Bias';
+          toggleBias.textContent = 'Info';
           toggleBias.className = 'text-blue-600 underline cursor-pointer bias-link';
 
           toggleBias.addEventListener('click', () => {
             if (biasDiv.innerHTML === '') {
+              /*
               if (ground_news_link) {
                 const iframe = document.createElement('iframe');
                 iframe.src = `https://snip.info/api/v1/snippet?url=${encodeURIComponent(ground_news_link)}&selector=%23__next%20%3E%20main%20%3E%20div.relative.transition-all.duration-500.z-10%20%3E%20div.bg-light-primary.dark%5C%3Abg-dark-primary.text-dark-primary.dark%5C%3Atext-light-primary%20%3E%20article%20%3E%20div.flex.flex-col.gap-2.tablet%5C%3Agap-3_2.col-span-12.desktop%5C%3Acol-span-9%20%3E%20div%3Anth-child(1)%20%3E%20div%3Anth-child(2)%20%3E%20div%20%3E%20div%3Anth-child(2)&selector=style`;
@@ -484,8 +491,10 @@
                 const sourceP = document.createElement('p');
                 sourceP.innerHTML = `<sub><a href='${ground_news_link}'>source</a></sub>`
               } else {
-                  biasDiv.innerHTML = `Could not calculate bias for this source. Try searching for <code>${source}</code> on <a class="text-blue-500 underline" href="https://ground.news">Ground News</a>.`;
+                  biasDiv.innerHTML = `Could not calculate bias for this source. Try searching for <code>${link}</code> on <a class="text-blue-500 underline" href="https://ground.news">Ground News</a>.`;
               }
+              */
+                biasDiv.innerHTML = `<span style="italic">${snippet}</span><br /><br />Curious about bias for this source? Try searching for <code>${link}</code> on <a class="text-blue-500 underline" href="https://ground.news">Ground News</a>.`;
             }
             biasDiv.classList.toggle('hidden');
             toggleBias.textContent = biasDiv.classList.contains('hidden')

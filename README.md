@@ -15,6 +15,8 @@ All this is pretty much AI generated so while functionally it's ok, the quality 
 ```bash
 npm install
 export OPENAI_API_KEY=<your-key>
+export GOOGLE_API_KEY=<your-key>
+export CUSTOM_SEARCH_ENGINE_ID=<your-google-cse-id>
 npm start
 ```
 

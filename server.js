@@ -26,18 +26,67 @@ app.get('/', (req, res) => {
 });
 
 const WeightSchema = z.object({
-  totalHours: z.number(),
-  totalHoursDescription: z.string(),
   data: z.array(
     z.object({
       category: z.string(),
       weight: z.number(),
       facts: z.array(z.string()), // Array of fact strings
-      sources: z.array(z.string()), // Array of valid URL strings
       reasoning: z.string(),
     })
   )
 });
+
+// Helper to fetch real sources
+const fetchRealSources = async (fact) => {
+  try {
+    const searchResponse = await axios.get(`https://www.googleapis.com/customsearch/v1`, {
+      params: {
+        key: process.env.GOOGLE_API_KEY,
+        cx: process.env.CUSTOM_SEARCH_ENGINE_ID,
+        q: fact,
+        num: 3,
+      },
+    });
+
+    return (
+      searchResponse.data.items?.map((item) => ({
+        title: item.title,
+        link: item.link,
+        snippet: item.snippet,
+      })) || []
+    );
+  } catch (error) {
+    console.error(`Error fetching sources for fact: ${fact}`, error.message);
+    return [];
+  }
+};
+
+// Logic-based weight and hours calculation
+const calculateWeightsAndHours = (categories, daysPerYear) => {
+  const totalAvailableHours = daysPerYear * 24; // Total hours in the year
+  let totalWeight = 0;
+  let relevanceModifier = 1;
+
+  const enrichedCategories = categories.map((category) => {
+    if (category.category == "Personal Relevance") {
+      relevanceModifier = 1 + category.weight/10;
+    }
+    const weight = category.weight; // Use the existing weight directly
+    totalWeight += weight;
+
+    return { ...category, weight };
+  });
+
+  // Scale totalHours proportionally to totalAvailableHours
+  const averageWeight = totalWeight / categories.length;
+  const totalHours = Math.round((averageWeight / 10) * (totalAvailableHours / 5) * relevanceModifier); // Scale down by a factor of 5
+  const modifiedDescription = relevanceModifier > 1 ? ` times personal relevance modifier ${relevanceModifier} ` : '';
+  const totalHoursDescription = `Calculated total hours (${totalHours}) based on an average AI-generated weight of ${averageWeight.toFixed(
+    1
+  )}${modifiedDescription} across ${categories.length} categories and ${totalAvailableHours} total available hours.`;
+
+  return { enrichedCategories, totalHours, totalHoursDescription };
+};
 
 // API endpoint to calculate weights and provide initial analysis
 app.post('/calculate-weight', async (req, res) => {
@@ -63,8 +112,8 @@ app.post('/calculate-weight', async (req, res) => {
     const daysContent = `The user is willing to spend ${daysPerYear} days per year (${daysPerYear * 24} full hours) on political reasoning, research, and discussion.`;
 
     const categories = personalImpactContent
-      ? 'Statistical Impact, Policy Impact Potential, Social Relevance, and Personal Relevance'
-      : 'Statistical Impact, Policy Impact Potential, and Social Relevance';
+      ? 'Statistical Impact, Social Relevance, Policy Impact Potential, and Personal Relevance'
+      : 'Statistical Impact, Social Relevance, and Policy Impact Potential';
 
     const completion = await openai.beta.chat.completions.parse({
       model: 'gpt-4o-2024-11-20',
@@ -76,18 +125,15 @@ app.post('/calculate-weight', async (req, res) => {
             `You are a system that evaluates political topics, as relevant to US citizens or visa holders. Your task is to return structured output for the following categories: ${categories}. Err toward two+ sentences per category, or longer sentences per category:
             - Weight: Provide a number between 1 and 10 to indicate the importance of the category. The weights should be relative to the preferred perspective, e.g. a Right-preferring user is less likely to heavily weigh topics like UBI and a Left-preferring user is less likely to heavily weigh topics like the 2nd amendment, while a Centrist would be more balanced.
             - Facts: Provide a list of 5 key facts relevant to the category. Ensure facts are specific and non-empty. Facts should include statistics (percentages, per capita numbers, etc.) when available.
-            - Sources: Provide credible, deep-linked sources for each fact (e.g., articles, reports, or papers, not top-level domains).
             - Reasoning: Explain the relevance and significance of the facts to the category. This should be at least a few sentences, terse but not overly so.
-            For "Personal Relevance", do not cite sources and do not return facts. Output must be in JSON format with keys: "category", "weight", "facts", "sources", "reasoning".
+            For "Personal Relevance", do not return facts. Output must be in JSON format with keys: "category", "weight", "facts", "reasoning".
 
             Categories (when present) should be assessed as follows:
             - Statistical Impact: Statistical relevance to the majority of Americans
             - Policy Impact Potential: Consider both legislative options but also non-legislative options, e.g. trans women in women's sports could be solved with league rules rather than legislation.
             - Social Relevance: This score should be based on correcting imbalances, e.g. affirmative action may be weighed higher than protecting girls from trans girls using the bathroom as the former aims to correct imbalances for statistical minorities while the latter is both statistically irrelevant and aims to reduce rights of statistical minorities.
 
-            The array of categories should be wrapped in an outer object under the key "data".
-
-            Finally, the response should include a top-level "totalHours" field that uses an intelligent algorithm that uses all weights to calculate a total number of hours an American should reasonably spend researching, discussing, or considering the topic at hand. The "totalHours" value must pass the common sense test; for example, if a user is willing to spend 10 days (240 hours per year) researching politics, a topic that doesn't weigh highly should be reasonably proportional to the overall time allocation. The totalHours calculation must involve the numeric weights assigned to the topic. A top-level "totalHoursDescription" field should also be included that describes in detail how the hours were calculated based on the given weights. "totalHoursDescription" should detail the exact calculation, not eliding details.`,
+            The array of categories should be wrapped in an outer object under the key "data".`,
         },
         {
           role: 'user',
@@ -102,10 +148,18 @@ app.post('/calculate-weight', async (req, res) => {
 
     const response = completion.choices[0].message.parsed;
 
+    const sortOrder = ["Statistical Impact", "Social Relevance", "Policy Impact Potential", "Personal Relevance"];
+
+    // Sort the data
+    response.data.sort((a, b) => {
+      return sortOrder.indexOf(a.category) - sortOrder.indexOf(b.category);
+    });
+
     // Resolve sources from Ground.News API in parallel
     const enhanceSources = async (sources) => {
       const apiCalls = sources.map(async (source) => {
         try {
+            /*
           const response = await axios.post(
             GROUND_NEWS_API_URL,
             { url: source },
@@ -116,6 +170,8 @@ app.post('/calculate-weight', async (req, res) => {
               },
             }
           );
+          */
+          const response = {data: {}};
 
           const interest = response.data?.interest;
           return {
@@ -131,28 +187,53 @@ app.post('/calculate-weight', async (req, res) => {
       return Promise.all(apiCalls);
     };
 
+    // Get real sources
+    const enhanceFacts = async (facts) => {
+      const apiCalls = facts.map(async (fact) => {
+        const sources = await fetchRealSources(fact + ` ${year}`);
+        return { fact, sources };
+      });
+
+      return Promise.all(apiCalls);
+    };
+
     const citationMap = new Map();
     let citationCounter = 1;
 
-    const enhancedData = await Promise.all(
-      response.data.map(async (category) => {
-        const enhancedSources = await enhanceSources(category.sources);
+    const enhancedData = await Promise.all(response.data.map(async (category) => {
+      const enhancedFacts = await enhanceFacts(category.facts);
+      /*
+      const enhancedSources = await enhanceSources(enhancedFacts.flatMap(fact => fact.sources));
 
-        enhancedSources.forEach((sourceObj, index) => {
-          if (sourceObj.source) {
-            const citation = `[${citationCounter}]`;
-            citationMap.set(citationCounter, sourceObj);
-            sourceObj.citation = citation;
-            citationCounter++;
-          }
-        });
+      enhancedSources.forEach((sourceObj, index) => {
+        if (sourceObj.source) {
+          const citation = `[${citationCounter}]`;
+          citationMap.set(citationCounter, sourceObj);
+          sourceObj.citation = citation;
+          citationCounter++;
+        }
+      });
+      */
 
-        return {
-          ...category,
-          sources: enhancedSources,
-        };
-      })
-    );
+      return {
+        ...category,
+        facts: enhancedFacts,
+      };
+    }));
+
+    enhancedData.flatMap(data => data.facts).flatMap(fact => fact.sources).forEach((sourceObj, index) => {
+      if (sourceObj.link) {
+        const citation = `[${citationCounter}]`;
+        citationMap.set(citationCounter, sourceObj);
+        sourceObj.citation = citation;
+        citationCounter++;
+      }
+    });
+
+    // Calculate weights and hours
+    const { enrichedCategories, totalHours, totalHoursDescription } =
+      calculateWeightsAndHours(enhancedData, daysPerYear);
+
 
     const combinedSources = Array.from(citationMap.entries()).map(([key, value]) => ({
       citation: `[${key}]`,
@@ -161,15 +242,14 @@ app.post('/calculate-weight', async (req, res) => {
     }));
 
     const analysisSummary = `
-      ${response.totalHoursDescription}
+      ${totalHoursDescription}
       Key Insights: ${response.data.map(w => `${w.category}: ${w.weight}/10`).join(', ')}.
     `;
 
     res.json({
       weights: enhancedData,
-      totalHours: response.totalHours,
-      totalHoursDescription: response.totalHoursDescription,
-      sources: combinedSources,
+      totalHours: totalHours,
+      totalHoursDescription: totalHoursDescription,
       analysisContext: analysisSummary, // Include analysis context for chat
     });
   } catch (error) {
