@@ -124,7 +124,7 @@ app.post('/calculate-weight', async (req, res) => {
           content:
             `You are a system that evaluates political topics, as relevant to US citizens or visa holders. Your task is to return structured output for the following categories: ${categories}. Err toward two+ sentences per category, or longer sentences per category:
             - Weight: Provide a number between 1 and 10 to indicate the importance of the category. The weights should be relative to the preferred perspective, e.g. a Right-preferring user is less likely to heavily weigh topics like UBI and a Left-preferring user is less likely to heavily weigh topics like the 2nd amendment, while a Centrist would be more balanced.
-            - Facts: Provide a list of 5 key facts relevant to the category. Ensure facts are specific and non-empty. Facts should include statistics (percentages, per capita numbers, etc.) when available.
+            - Facts: Provide a list of 5 key facts relevant to the category. Ensure facts are specific and non-empty. Facts should include statistics (percentages, per capita numbers, etc.) when available. Facts should also be distinct from each other, since each one will be fed to an individual search query; i.e., a fact on its own should not require additional context for a search engine to understand.
             - Reasoning: Explain the relevance and significance of the facts to the category. This should be at least a few sentences, terse but not overly so.
             For "Personal Relevance", do not return facts. Output must be in JSON format with keys: "category", "weight", "facts", "reasoning".
 
